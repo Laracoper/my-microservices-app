@@ -1,0 +1,4 @@
+redis==5.0.1
+mysql-connector-python==8.3.0
+pandas==2.2.0
+requests==2.31.0

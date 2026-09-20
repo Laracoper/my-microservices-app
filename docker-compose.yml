@@ -1,0 +1,136 @@
+version: '3.8'
+
+networks:
+  micro_network:
+    driver: bridge
+
+services:
+  # 1. Веб-сервер Nginx
+  nginx:
+    image: nginx:alpine
+    container_name: micro_nginx
+    ports:
+      - "8087:80"
+    volumes: # <- Вот она, нужная секция для путей!
+      - ./src/laravel-app:/var/www/laravel-app
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - micro_network
+
+  # 2. Сервер приложений (Laravel / PHP-FPM)
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${APP_UID}
+        GID: ${APP_GID}
+    container_name: micro_laravel
+    volumes:
+      - ./src/laravel-app:/var/www/laravel-app
+    networks:
+      - micro_network
+
+  # 2.5 Микросервис WebSocket-сервера Laravel Reverb
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: micro_reverb
+    volumes:
+      - ./src/laravel-app:/var/www/laravel-app
+    ports:
+      - "8080:8080" # Открываем порт для подключения браузера
+    working_dir: /var/www/laravel-app
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    depends_on:
+      - app
+    networks:
+      - micro_network
+
+  # 3. Микросервис автосборщика Vite
+  # vite:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/php/Dockerfile
+  #     args:
+  #       UID: ${APP_UID}
+  #       GID: ${APP_GID}
+  #   container_name: micro_vite
+  #   volumes:
+  #     - ./src/laravel-app:/var/www/laravel-app
+  #   ports:
+  #     - "5173:5173"
+  #   working_dir: /var/www/laravel-app
+  #   command: npm run dev -- --host 0.0.0.0
+  #   depends_on:
+  #     - app
+  #   networks:
+  #     - micro_network
+
+  # 4. База данных MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: micro_mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    # ports:
+    #   - "3306:3306"
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    networks:
+      - micro_network
+
+  # 5. Брокер очередей (Redis)
+  redis:
+    image: redis:alpine
+    container_name: micro_redis
+    # ports:
+    #   - "6379:6379"
+    networks:
+      - micro_network
+
+  # 6. Фоновый микросервис на Python
+  python-service:
+    build:
+      context: .
+      dockerfile: docker/python/Dockerfile # Указываем на наш новый Dockerfile!
+    container_name: micro_python
+    volumes:
+      - ./src/python-service:/app
+      # Сквозной мост к файлам документов из Laravel в Python
+      - ./src/laravel-app/storage/app/private/documents:/app/storage/documents
+    working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+    # Команда теперь кристально чистая, никакой долгой установки при старте!
+    command: python main.py
+    depends_on:
+      - app
+      - redis
+      - mysql
+    networks:
+      - micro_network
+
+  # 7. Изолированный микросервис локального ИИ Ollama
+  ollama:
+    image: ollama/ollama:latest
+    container_name: micro_ollama
+    volumes:
+      - ./docker/ollama/data:/root/.ollama # Чтобы скачанная модель не удалялась при перезапуске
+    # ports:
+    #   - "11434:11434"
+    networks:
+      - micro_network
+
+  
+
