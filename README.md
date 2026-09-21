@@ -72,7 +72,7 @@
 ### 🏁 Шаг 1: Скачивание проекта с GitHub
 Откройте ваш терминал и скачайте исходный код проекта на свой компьютер:
 ```bash
-git clone https://github.com
+git clone https://github.com/Laracoper/my-microservices-app.git
 cd my-microservices-app
 ```
 
