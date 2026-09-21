@@ -61,7 +61,7 @@
 
 ### 1. Клонирование репозитория и настройка окружения
 ```bash
-git clone https://github.com](https://github.com/Laracoper/my-microservices-app.git
+git clone https://github.com/Laracoper/my-microservices-app.git
 cd my-microservices-app
 ```
 
