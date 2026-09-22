@@ -107,7 +107,7 @@ docker exec -it micro_laravel composer config preferred-install source
 docker exec -it micro_laravel composer config process-timeout 34
 
 # 3. Скачиваем PHP зависимости с отображением живой полосы прогресса
-docker exec -it micro_laravel composer install --progress
+docker exec -it micro_laravel composer install 
 
 # 4. Устанавливаем и компилируем фронтенд-пакеты Tailwind v4 намертво для релиза
 docker exec -it micro_laravel npm install
